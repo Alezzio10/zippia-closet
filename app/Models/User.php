@@ -21,6 +21,10 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'apellido',
+        'telefono',
+        'direccion_id',
+        'rol_id',
     ];
 
     /**
@@ -45,4 +49,20 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+    
+    public function direccion()
+    {
+        return $this->belongsTo(Direccion::class);
+    }
+
+    public function rol()
+    {
+        return $this->belongsTo(Rol::class);
+    }
+
+    public function pedidos()
+    {
+        return $this->hasMany(Pedido::class);
+    }
+
 }
