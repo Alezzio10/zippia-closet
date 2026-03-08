@@ -11,6 +11,3 @@ Route::get('/', function () {
    
 });
  Route::resource('productos', ProductoController::class);
-Route::get('/productos', [ProductoController::class, 'index']);
-Route::post('/productos', [ProductosController::class, 'store']);
-
