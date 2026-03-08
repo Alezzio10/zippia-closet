@@ -4,6 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
+use Illuminate\Support\Facades\DB;
+use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+
 class Pago extends Model
 {
     protected $table = 'pagos';
@@ -16,7 +21,7 @@ class Pago extends Model
 
     public function pedido()
     {
-        return $this->belongsTo(Pedido::class, 'carrito_id');
+        return $this->belongsTo(Pedido::class, 'pedido_id');
     }
 
     public function metodoPago()
