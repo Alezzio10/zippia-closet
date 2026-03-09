@@ -11,12 +11,16 @@ return [
     | reset "broker" for your application. You may change these values
     | as required, but they're a perfect start for most applications.
     |
-    */
-
-    'defaults' => [
+     'defaults' => [
         'guard' => env('AUTH_GUARD', 'web'),
         'passwords' => env('AUTH_PASSWORD_BROKER', 'users'),
     ],
+    */
+
+        'defaults' => [
+        'guard' => 'api',
+        'passwords' => 'users',
+        ],
 
     /*
     |--------------------------------------------------------------------------
@@ -32,15 +36,21 @@ return [
     | system used by the application. Typically, Eloquent is utilized.
     |
     | Supported: "session"
-    |
-    */
-
-    'guards' => [
+    |   'guards' => [
         'web' => [
             'driver' => 'session',
             'provider' => 'users',
         ],
     ],
+    */
+
+      'guards' => [
+      'api' => [
+          'driver' => 'jwt',
+          'provider' => 'users',
+      ],
+  ],
+
 
     /*
     |--------------------------------------------------------------------------
