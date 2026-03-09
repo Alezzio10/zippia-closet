@@ -9,13 +9,18 @@ class MetodoPago extends Model
       protected $table = 'metodo_pagos';
 
     protected $fillable = [
+        'user_id',
         'cuatro_digitos',
-        'fecha_vencimiento',
-        'ccv'
+        'fecha_vencimiento'
     ];
 
     public function pagos()
     {
         return $this->hasMany(Pago::class, 'metodo_id');
+    }
+
+    public function usuario()
+    {
+        return $this->belongsTo(User::class, 'user_id');
     }
 }
