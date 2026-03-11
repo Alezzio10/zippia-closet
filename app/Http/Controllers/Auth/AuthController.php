@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use App\Models\User;
+use Spatie\Permission\Models\Role;
 
 class AuthController extends Controller
 {
@@ -45,6 +46,7 @@ class AuthController extends Controller
       ]);
 
       //Recordatorio--Asignar rol por defecto
+      $user->assignRole('CLIENTE');
 
       //generamos el token
       $token = JWTAuth::fromUser($user);
