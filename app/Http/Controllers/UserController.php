@@ -3,6 +3,11 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth;
+use App\Models\User;
+
+
 
 class UserController extends Controller
 {
@@ -11,7 +16,10 @@ class UserController extends Controller
      */
     public function index()
     {
-        //
+        //traer todos los usuariosph
+         return response()->json(User::all());
+        
+
     }
 
     /**
@@ -27,7 +35,23 @@ class UserController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        //crear usuario
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email',
+            'password' => 'required|string|min:6',
+            'rol_id' => 'required'
+        ]);
+
+        $user = User::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'password' => Hash::make($request->password),
+            'rol_id' => $request->rol_id
+        ]);
+
+        return response()->json($user, 201);
+
     }
 
     /**
@@ -35,7 +59,14 @@ class UserController extends Controller
      */
     public function show(string $id)
     {
-        //
+        //mostrar usuario
+        $user = User::find($id);
+
+        if (!$user) {
+            return response()->json(['message' => 'Usuario no encontrado'], 404);
+        }
+        return response()->json($user);
+    
     }
 
     /**
@@ -51,7 +82,39 @@ class UserController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        //
+         // Buscar el usuario
+    $user = User::find($id);
+    if (!$user) {
+        return response()->json([
+            'message' => 'Usuario no encontrado'
+        ], 404);
+    }
+    // Validar datos que vienen del request
+    $request->validate([
+        'name' => 'sometimes|string|max:255',
+        'email' => 'sometimes|email|unique:users,email,' . $id,
+        'password' => 'sometimes|string|min:6',
+        'rol_id' => 'sometimes'
+    ]);
+    // Actualizar solo si vienen los datos
+    if ($request->name) {
+        $user->name = $request->name;
+    }
+    if ($request->email) {
+        $user->email = $request->email;
+    }
+    if ($request->password) {
+        $user->password = Hash::make($request->password);
+    }
+    if ($request->rol_id) {
+        $user->rol_id = $request->rol_id;
+    }
+    //Guardar cambios
+    $user->save();
+    return response()->json([
+        'message' => 'Usuario actualizado correctamente',
+        'user' => $user
+    ]);
     }
 
     /**
@@ -59,6 +122,17 @@ class UserController extends Controller
      */
     public function destroy(string $id)
     {
-        //
+        //eliminar usuario
+        $user = User::find($id);
+
+        if (!$user) {
+            return response()->json(['message' => 'Usuario no encontrado'], 404);
+        }
+
+        $user->delete();
+
+        return response()->json(['message' => 'Usuario eliminado']);
     }
+         
 }
+

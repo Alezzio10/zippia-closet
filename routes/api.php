@@ -9,6 +9,9 @@ use App\Http\Controllers\PedidoController;
 use App\Http\Controllers\MetodoPagoController;
 use App\Http\Controllers\PagoController;
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\UserController;
+
+
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -32,5 +35,9 @@ Route::prefix('auth')->group(function(){
         Route::get('me',[AuthController::class, 'me']);
         Route::post('logout',[AuthController::class, 'logout']);
         Route::post('refresh',[AuthController::class, 'refresh']);
+
+      Route::apiResource('users', UserController::class);
+       
+
     });
 });
