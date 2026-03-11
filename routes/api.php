@@ -9,6 +9,7 @@ use App\Http\Controllers\PedidoController;
 use App\Http\Controllers\MetodoPagoController;
 use App\Http\Controllers\PagoController;
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\DireccionController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -20,6 +21,7 @@ Route::apiResource('productos', ProductoController::class);
 Route::apiResource('categorias', CategoriaController::class);
 Route::apiResource('marcas', MarcaController::class);
 Route::apiResource('pedidos', PedidoController::class);
+Route::apiResource('direcciones', DireccionController::class);
 //ruta de metodo pago
 Route::apiResource('metodo-pagos', MetodoPagoController::class);
 Route::apiResource('pagos', PagoController::class);
