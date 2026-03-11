@@ -16,6 +16,6 @@ class Direccion extends Model
 
     public function usuarios()
     {
-        return $this->hasMany(Usuario::class);
+        return $this->hasMany(User::class);
     }
 }
