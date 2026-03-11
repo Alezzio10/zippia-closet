@@ -23,6 +23,7 @@ Route::apiResource('productos', ProductoController::class);
 Route::apiResource('categorias', CategoriaController::class);
 Route::apiResource('marcas', MarcaController::class);
 Route::apiResource('pedidos', PedidoController::class);
+Route::apiResource('direcciones', DireccionController::class);
 //ruta de metodo pago
 Route::apiResource('metodo-pagos', MetodoPagoController::class);
 Route::apiResource('pagos', PagoController::class);
