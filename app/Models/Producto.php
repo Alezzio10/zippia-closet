@@ -9,13 +9,14 @@ class Producto extends Model
      protected $table = 'productos';
 
     protected $fillable = [
-        'categoria_id',
-        'marca_id',
         'nombre',
         'precio',
+        'stock',
         'talla',
+        'color',
         'imagen',
-        'stock'
+        'marca_id',
+        'categoria_id',
     ];
 
     public function categoria()
@@ -38,3 +39,4 @@ class Producto extends Model
     return $this->hasMany(Imagen::class);
     }
 }
+//
