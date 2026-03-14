@@ -25,6 +25,7 @@ Route::apiResource('categorias', CategoriaController::class);
 Route::apiResource('marcas', MarcaController::class);
 Route::apiResource('pedidos', PedidoController::class);
 Route::apiResource('direcciones', DireccionController::class);
+Route::apiResource('users', UserController::class);
 //ruta de metodo pago
 Route::apiResource('metodo-pagos', MetodoPagoController::class);
 Route::apiResource('pagos', PagoController::class);
@@ -37,9 +38,5 @@ Route::prefix('auth')->group(function(){
         Route::get('me',[AuthController::class, 'me']);
         Route::post('logout',[AuthController::class, 'logout']);
         Route::post('refresh',[AuthController::class, 'refresh']);
-
-      Route::apiResource('users', UserController::class);
-       
-
     });
 });

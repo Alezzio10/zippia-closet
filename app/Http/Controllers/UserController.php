@@ -33,27 +33,28 @@ class UserController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
-    {
-        //crear usuario
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email',
-            'password' => 'required|string|min:6',
-            'rol_id' => 'required'
-        ]);
+   public function store(Request $request)
+{
+    $request->validate([
+        'name' => 'required|string|max:255',
+        'apellido' => 'nullable|string|max:255',
+        'telefono' => 'nullable|string|max:20',
+        'email' => 'required|email|unique:users,email',
+        'password' => 'required|string|min:6',
+        'rol_id' => 'required'
+    ]);
 
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'rol_id' => $request->rol_id
-        ]);
+    $user = User::create([
+        'name' => $request->name,
+        'apellido' => $request->apellido,
+        'telefono' => $request->telefono,
+        'email' => $request->email,
+        'password' => Hash::make($request->password),
+        'rol_id' => $request->rol_id
+    ]);
 
-        return response()->json($user, 201);
-
-    }
-
+    return response()->json($user, 201);
+}
     /**
      * Display the specified resource.
      */
@@ -93,12 +94,20 @@ class UserController extends Controller
     $request->validate([
         'name' => 'sometimes|string|max:255',
         'email' => 'sometimes|email|unique:users,email,' . $id,
+        'apellido' => 'sometimes|string|max:255',
+        'telefono' => 'sometimes|string|max:20',
         'password' => 'sometimes|string|min:6',
         'rol_id' => 'sometimes'
     ]);
     // Actualizar solo si vienen los datos
     if ($request->name) {
         $user->name = $request->name;
+    }
+    if ($request->apellido) {
+        $user->apellido = $request->apellido;
+    }
+    if ($request->telefono) {
+        $user->telefono = $request->telefono;
     }
     if ($request->email) {
         $user->email = $request->email;
