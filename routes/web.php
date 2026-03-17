@@ -11,4 +11,3 @@ Route::get('/', function () {
    
 });
  Route::resource('productos', ProductoController::class);
-

@@ -12,6 +12,7 @@ use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\DireccionController;
 use App\Http\Controllers\WebhookController;
+use App\Http\Controllers\WompiController;
 
 
 
@@ -31,9 +32,14 @@ Route::apiResource('direcciones', DireccionController::class);
 Route::apiResource('users', UserController::class);
 //ruta de metodo pago
 Route::apiResource('metodo-pagos', MetodoPagoController::class);
+Route::post('metodo-pagos/{metodoId}/probar-pago', [MetodoPagoController::class, 'probarPago']);
 Route::apiResource('pagos', PagoController::class);
+Route::post('pagos/{pagoId}/pagar', [PagoController::class, 'pagar']);
 // Webhook Wompi
 Route::post('/webhook/wompi', [WebhookController::class, 'wompi']);
+
+// Tokenización Wompi (requiere usuario logueado)
+Route::post('/tokenizar', [WompiController::class, 'tokenizar']);
 //Rutas para AuthController
 Route::prefix('auth')->group(function(){
     Route::post('register', [AuthController::class, 'register']);

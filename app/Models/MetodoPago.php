@@ -11,7 +11,8 @@ class MetodoPago extends Model
     protected $fillable = [
         'user_id',
         'cuatro_digitos',
-        'fecha_vencimiento'
+        'fecha_vencimiento',
+        'token_tarjeta',
     ];
 
     public function pagos()
