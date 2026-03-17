@@ -59,8 +59,8 @@ RUN composer dump-autoload --optimize
 # Instalar deps Node y compilar assets con Vite
 RUN npm ci 2>/dev/null || npm install && npm run build
 
-# Crear .env sin APP_KEY para que solo use la variable de entorno (Railway)
-RUN if [ ! -f .env ]; then grep -v '^APP_KEY=' .env.example > .env || cp .env.example .env; fi
+# Crear .env: sin APP_KEY, usar mysql por defecto (Railway)
+RUN if [ ! -f .env ]; then grep -v '^APP_KEY=' .env.example | sed 's/^DB_CONNECTION=sqlite/DB_CONNECTION=mysql/' > .env || cp .env.example .env; fi
 
 # Copiar y preparar entrypoint
 COPY docker-entrypoint.sh /usr/local/bin/
