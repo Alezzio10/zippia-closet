@@ -62,11 +62,14 @@ RUN npm ci 2>/dev/null || npm install && npm run build
 # Crear .env sin APP_KEY para que solo use la variable de entorno (Railway)
 RUN if [ ! -f .env ]; then grep -v '^APP_KEY=' .env.example > .env || cp .env.example .env; fi
 
+# Copiar y preparar entrypoint
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
 # Permisos para storage y bootstrap/cache
 RUN chmod -R 775 storage bootstrap/cache
 
 EXPOSE 8000
 
 # Railway inyecta PORT
-# Limpiar cache de config (puede tener APP_KEY vacía), migrar y arrancar
-CMD php artisan config:clear && php artisan migrate --force && exec php artisan serve --host=0.0.0.0 --port=${PORT:-8000}
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
