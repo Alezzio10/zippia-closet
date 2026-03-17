@@ -16,7 +16,9 @@ class Pago extends Model
     protected $fillable = [
         'pedido_id',
         'fechaPago',
-        'metodo_id'
+        'metodo_id',
+        'user_id',
+        'estado',
     ];
 
     public function pedido()
@@ -27,5 +29,10 @@ class Pago extends Model
     public function metodoPago()
     {
         return $this->belongsTo(MetodoPago::class, 'metodo_id');
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id');
     }
 }

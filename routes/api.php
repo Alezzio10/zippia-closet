@@ -11,6 +11,7 @@ use App\Http\Controllers\PagoController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\DireccionController;
+use App\Http\Controllers\WebhookController;
 
 
 
@@ -20,6 +21,8 @@ Route::get('/user', function (Request $request) {
 //Ruta para gestionar el estado de el pedido
 Route::patch('/pedidos/estado/{id}', [PedidoController::class, 'gestionarEstado']);
 //Rutas de la API
+Route::post('users/register', [UserController::class, 'register']);
+Route::post('users/login', [UserController::class, 'login']);
 Route::apiResource('productos', ProductoController::class);
 Route::apiResource('categorias', CategoriaController::class);
 Route::apiResource('marcas', MarcaController::class);
@@ -29,6 +32,8 @@ Route::apiResource('users', UserController::class);
 //ruta de metodo pago
 Route::apiResource('metodo-pagos', MetodoPagoController::class);
 Route::apiResource('pagos', PagoController::class);
+// Webhook Wompi
+Route::post('/webhook/wompi', [WebhookController::class, 'wompi']);
 //Rutas para AuthController
 Route::prefix('auth')->group(function(){
     Route::post('register', [AuthController::class, 'register']);

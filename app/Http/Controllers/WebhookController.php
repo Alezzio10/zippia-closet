@@ -1,0 +1,62 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use App\Models\Pago;
+
+class WebhookController extends Controller
+{
+    public function wompi(Request $request)
+    {
+        try {
+            $payload = $request->all();
+
+            Log::info('Webhook de Wompi recibido', [
+                'payload' => $payload,
+            ]);
+
+            $pagoId = $payload['cliente']['pago_id'] ?? null;
+            $clienteId = $payload['cliente']['cliente_id'] ?? null;
+            $resultado = $payload['ResultadoTransaccion'] ?? null;
+
+            if (!$pagoId || !$clienteId) {
+                return response()->json([
+                    'message' => 'Datos de cliente incompletos en el webhook',
+                ], 400);
+            }
+
+            $pago = Pago::where('id', $pagoId)
+                ->where('user_id', $clienteId)
+                ->first();
+
+            if (!$pago) {
+                return response()->json([
+                    'message' => 'Pago no encontrado para el usuario indicado',
+                ], 404);
+            }
+
+            $nuevoEstado = ($resultado === 'ExitosaAprobada') ? 'Completado' : 'Fallida';
+
+            $pago->estado = $nuevoEstado;
+            $pago->save();
+
+            return response()->json([
+                'message' => 'Estado de pago actualizado correctamente',
+                'pago_id' => $pago->id,
+                'estado' => $pago->estado,
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error procesando webhook de Wompi', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'message' => 'Error al procesar el webhook',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+}
+

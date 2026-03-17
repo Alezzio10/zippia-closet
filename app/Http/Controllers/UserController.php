@@ -5,12 +5,87 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Validator;
+use Tymon\JWTAuth\Facades\JWTAuth;
 use App\Models\User;
 
 
 
 class UserController extends Controller
 {
+    public function register(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:191',
+            'email' => 'required|string|email|max:191|unique:users',
+            'password' => 'required|string|min:8',
+            'apellido' => 'required|string|max:255',
+            'telefono' => 'required|string|max:20',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Error de validación',
+                'errores' => $validator->errors(),
+            ], 422);
+        }
+
+        $user = User::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'password' => Hash::make($request->password),
+            'apellido' => $request->apellido,
+            'telefono' => $request->telefono,
+        ]);
+
+        // Rol por defecto para registros públicos
+        try {
+            $user->assignRole('CLIENTE');
+        } catch (\Exception $e) {
+            // si el rol no existe, igual devolvemos el registro (no bloqueante)
+        }
+
+        $token = JWTAuth::fromUser($user);
+
+        return response()->json([
+            'message' => 'Usuario registrado correctamente',
+            'user' => $user,
+            'access_token' => $token,
+            'token_type' => 'bearer',
+            'expires_in' => auth()->factory()->getTTL() * 60,
+        ], 201);
+    }
+
+    public function login(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email',
+            'password' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Error de validación',
+                'errores' => $validator->errors(),
+            ], 422);
+        }
+
+        $credenciales = $request->only('email', 'password');
+
+        if (!$token = Auth::attempt($credenciales)) {
+            return response()->json([
+                'message' => 'Credenciales inválidas',
+            ], 401);
+        }
+
+        return response()->json([
+            'access_token' => $token,
+            'token_type' => 'bearer',
+            'user' => auth()->user(),
+            'expires_in' => auth()->factory()->getTTL() * 60,
+        ]);
+    }
+
     /**
      * Display a listing of the resource.
      */
