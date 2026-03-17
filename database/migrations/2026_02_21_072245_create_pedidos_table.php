@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('pedidos', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('usuario_id')->constrained('usuarios');
+            $table->foreignId('usuario_id')->constrained('users');
 
             $table->decimal('total', 10, 2);
             $table->string('estado', 50);
