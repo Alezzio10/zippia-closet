@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 use App\Models\MetodoPago;
+use App\Models\Pago;
+use App\Models\Pedido;
 use Illuminate\Support\Facades\DB;
 
 use Illuminate\Http\Request;
@@ -11,6 +13,67 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class MetodoPagoController extends Controller
 {
+    public function probarPago(Request $request, string $metodoId)
+    {
+        try {
+            $data = $request->validate([
+                'user_id' => 'required|integer|exists:users,id',
+                'monto' => 'sometimes|numeric|min:0.01',
+            ]);
+
+            $metodo = MetodoPago::findOrFail($metodoId);
+
+            if ((int) $metodo->user_id !== (int) $data['user_id']) {
+                return response()->json([
+                    'message' => 'El método de pago no corresponde al usuario indicado',
+                ], 403);
+            }
+
+            $monto = isset($data['monto']) ? (float) $data['monto'] : 1.00;
+
+            DB::beginTransaction();
+
+            $pedido = Pedido::create([
+                'usuario_id' => (int) $data['user_id'],
+                'total' => $monto,
+                'estado' => 'PENDIENTE',
+            ]);
+
+            $pago = Pago::create([
+                'pedido_id' => $pedido->id,
+                'metodo_id' => $metodo->id,
+                'user_id' => (int) $data['user_id'],
+                'fechaPago' => now()->toDateString(),
+                'estado' => 'Pendiente',
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Pago de prueba creado',
+                'pedido' => $pedido,
+                'pago' => $pago,
+            ], 201);
+        } catch (ModelNotFoundException $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Método de pago no encontrado con id = ' . $metodoId,
+            ], 404);
+        } catch (ValidationException $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Error de validación',
+                'errores' => $e->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Error al crear pago de prueba',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
     /**
      * Display a listing of the resource.
      */
@@ -18,10 +81,18 @@ class MetodoPagoController extends Controller
     {
         try{
 
-        $request = MetodoPago::orderBy('id','asc')->get();
+        $query = MetodoPago::orderBy('id','asc');
+
+        if ($request->filled('user_id')) {
+            $query->where('user_id', $request->input('user_id'));
+        }
+
+        $metodos = $query->get();
 
         return response()->json([
-            'metodos de pago: ' => $request
+            // compat: mantenemos la llave anterior
+            'metodos de pago: ' => $metodos,
+            'data' => $metodos,
         ],200);
 
     }catch(\Exception $e){

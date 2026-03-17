@@ -5,12 +5,144 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 
 use App\Models\Pago;
+use App\Services\WompiAuthService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class PagoController extends Controller
 {
+    public function pagar(Request $request, string $pagoId, WompiAuthService $wompiAuth)
+    {
+        try {
+            $data = $request->validate([
+                'user_id' => 'sometimes|integer|exists:users,id',
+            ]);
+
+            $pago = Pago::with(['pedido', 'metodoPago', 'user'])->findOrFail($pagoId);
+
+            if (isset($data['user_id']) && (int)$pago->user_id !== (int)$data['user_id']) {
+                return response()->json([
+                    'message' => 'El pago no corresponde al usuario indicado',
+                ], 403);
+            }
+
+            if (in_array($pago->estado, ['Completado', 'Cancelado'], true)) {
+                return response()->json([
+                    'message' => 'El pago no se puede procesar en su estado actual',
+                    'estado' => $pago->estado,
+                ], 409);
+            }
+
+            if (!$pago->metodoPago) {
+                return response()->json([
+                    'message' => 'El pago no tiene método de pago asociado',
+                ], 422);
+            }
+
+            if (!$pago->metodoPago->token_tarjeta) {
+                return response()->json([
+                    'message' => 'El método de pago no tiene token de tarjeta (token_tarjeta)',
+                ], 422);
+            }
+
+            if (!$pago->user) {
+                return response()->json([
+                    'message' => 'El pago no tiene usuario asociado (user_id)',
+                ], 422);
+            }
+
+            $pago->estado = 'Procesando';
+            $pago->save();
+
+            $idAplicativo = env('WOMPI_APP_ID');
+
+            if (!$idAplicativo) {
+                return response()->json([
+                    'message' => 'Falta configurar WOMPI_APP_ID en variables de entorno',
+                ], 500);
+            }
+
+            $token = $wompiAuth->getAccessToken();
+
+            $monto = $pago->pedido?->total;
+
+            if ($monto === null) {
+                return response()->json([
+                    'message' => 'No se pudo determinar el monto (pedido.total) para el pago',
+                ], 422);
+            }
+
+            $urlWebhook = rtrim((string) env('APP_URL', ''), '/') . '/api/webhook/wompi';
+
+            $payloadWompi = [
+                'monto' => (float) $monto,
+                'emailCliente' => (string) $pago->user->email,
+                'nombreCliente' => (string) ($pago->user->name ?? ''),
+                'tokenTarjeta' => (string) $pago->metodoPago->token_tarjeta,
+                'configuracion' => [
+                    'emailsNotificacion' => (string) $pago->user->email,
+                    'urlWebhook' => $urlWebhook,
+                    'telefonosNotificacion' => (string) ($pago->user->telefono ?? ''),
+                    'notificarTransaccionCliente' => true,
+                ],
+                'datosAdicionales' => [
+                    'pago_id' => (string) $pago->id,
+                    'cliente_id' => (string) $pago->user_id,
+                ],
+            ];
+
+            $resp = $wompiAuth->http()->baseUrl('https://api.wompi.sv')
+                ->acceptJson()
+                ->withToken($token)
+                ->withQueryParameters(['idAplicativo' => $idAplicativo])
+                ->post('/TransaccionCompra/TokenizadaSin3Ds', $payloadWompi);
+
+            if (!$resp->successful()) {
+                Log::error('Error iniciando pago tokenizado en Wompi', [
+                    'pago_id' => $pago->id,
+                    'status' => $resp->status(),
+                    'body' => $resp->body(),
+                ]);
+
+                $pago->estado = 'Fallida';
+                $pago->save();
+
+                return response()->json([
+                    'message' => 'No se pudo iniciar la transacción en Wompi',
+                    'status' => $resp->status(),
+                    'wompi_body' => $resp->json(),
+                    'pago' => $pago,
+                ], 502);
+            }
+
+            return response()->json([
+                'message' => 'Transacción iniciada en Wompi',
+                'pago' => $pago,
+                'wompi' => $resp->json(),
+            ], 200);
+        } catch (ModelNotFoundException $e) {
+            return response()->json([
+                'message' => 'Pago no encontrado con id = ' . $pagoId,
+            ], 404);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => 'Error de validación',
+                'errores' => $e->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('Error en /pagos/{pagoId}/pagar', [
+                'pago_id' => $pagoId,
+                'error' => $e->getMessage(),
+            ]);
+            return response()->json([
+                'message' => 'Error al procesar el pago',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
     /**
      * Display a listing of the resource.
      */
