@@ -5,16 +5,21 @@
 1. **Crear proyecto en Railway** y conectarlo al repositorio de `zippia-closet`.
 
 2. **Añadir MySQL**  
-   En Railway: **+ New** → **Database** → **Add MySQL**. Railway generará las variables de entorno de conexión.
+   En Railway: **+ New** → **Database** → **Add MySQL**. Luego, en tu servicio Laravel: **Variables** → **Add Variable** → **Add Reference** y selecciona las variables del servicio MySQL. El entrypoint mapea automáticamente `MYSQLHOST`→`DB_HOST`, `MYSQLPORT`→`DB_PORT`, etc.
 
-3. **Variables de entorno obligatorias** (Settings → Variables):
-   - `APP_KEY`: Generar con `php artisan key:generate --show`
+   Si no usa referencias, añade manualmente:
+   - `DB_HOST` = Referencia a `MYSQLHOST` del addon MySQL
+   - `DB_PORT` = Referencia a `MYSQLPORT`
+   - `DB_DATABASE` = Referencia a `MYSQLDATABASE`
+   - `DB_USERNAME` = Referencia a `MYSQLUSER`
+   - `DB_PASSWORD` = Referencia a `MYSQLPASSWORD`
+
+3. **Variables de entorno obligatorias** (en el servicio Laravel):
+   - `APP_KEY`: Generar con `php artisan key:generate --show` (o se genera solo si falta)
    - `APP_ENV=production`
    - `APP_DEBUG=false`
-   - `APP_URL`: URL de tu app en Railway (ej. `https://tu-proyecto.up.railway.app`)
-   - `DB_CONNECTION=mysql`
-   - `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` (se completan si añades el addon MySQL)
-   - `JWT_SECRET`: Generar uno seguro (32+ caracteres aleatorios)
+   - `APP_URL`: URL de tu app (ej. `https://tu-proyecto.up.railway.app`)
+   - `JWT_SECRET`: Generar uno seguro (32+ caracteres)
 
 4. **Deploy**  
    Railway detecta el `Dockerfile` y desplegará el contenedor.
