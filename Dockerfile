@@ -16,6 +16,7 @@ RUN apt-get update && apt-get install -y \
     libjpeg62-turbo-dev \
     libonig-dev \
     libxml2-dev \
+    libicu-dev \
     curl \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j$(nproc) \
