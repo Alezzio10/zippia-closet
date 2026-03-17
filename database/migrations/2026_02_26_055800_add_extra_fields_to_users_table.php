@@ -12,11 +12,19 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-        $table->string('apellido')->nullable();
-        $table->string('telefono')->nullable();
-        $table->foreignId('direccion_id')->nullable()->constrained()->nullOnDelete();
-        $table->foreignId('rol_id')->nullable()->constrained()->nullOnDelete();
-    });
+            if (!Schema::hasColumn('users', 'apellido')) {
+                $table->string('apellido')->nullable();
+            }
+            if (!Schema::hasColumn('users', 'telefono')) {
+                $table->string('telefono')->nullable();
+            }
+            if (!Schema::hasColumn('users', 'direccion_id')) {
+                $table->foreignId('direccion_id')->nullable()->constrained('direcciones')->nullOnDelete();
+            }
+            if (!Schema::hasColumn('users', 'rol_id')) {
+                $table->foreignId('rol_id')->nullable()->constrained('roles')->nullOnDelete();
+            }
+        });
     }
 
     /**
