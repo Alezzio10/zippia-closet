@@ -26,27 +26,22 @@ export APP_ENV="${APP_ENV:-production}"
 export APP_DEBUG="${APP_DEBUG:-false}"
 export APP_URL="${APP_URL:-}"
 
-# Escribir todas las variables necesarias en .env
+# Escribir TODAS las variables de entorno al .env (dinámico, no necesita lista fija)
 php -r '
 $file = "/var/www/html/.env";
-$content = file_exists($file) ? file_get_contents($file) : "";
-$vars = [
-  "APP_KEY", "APP_ENV", "APP_DEBUG", "APP_URL",
-  "DB_CONNECTION", "DB_HOST", "DB_PORT", "DB_DATABASE", "DB_USERNAME", "DB_PASSWORD",
-  "JWT_SECRET"
-];
-foreach ($vars as $name) {
-  $val = getenv($name);
-  if ($val !== false && $val !== "") {
-    $pattern = "/^" . preg_quote($name, "/") . "=.*/m";
-    if (preg_match($pattern, $content)) {
-      $content = preg_replace($pattern, $name . "=" . $val, $content);
-    } else {
-      $content = trim($content) . "\n" . $name . "=" . $val . "\n";
-    }
+$lines = [];
+foreach (getenv() as $name => $val) {
+  // Saltar variables internas del sistema/Docker que no son de Laravel
+  if (in_array($name, ["PATH","HOME","HOSTNAME","TERM","SHLVL","PWD","_","DEBIAN_FRONTEND","COMPOSER_ALLOW_SUPERUSER","PHPIZE_DEPS","PHP_INI_DIR","PHP_CFLAGS","PHP_CPPFLAGS","PHP_LDFLAGS","PHP_VERSION","PHP_URL","PHP_ASC_URL","PHP_SHA256","GPG_KEYS","PHP_SHA256"], true)) {
+    continue;
   }
+  // Saltar variables de Railway internas (RAILWAY_*)
+  if (str_starts_with($name, "RAILWAY_")) {
+    continue;
+  }
+  $lines[] = $name . "=" . $val;
 }
-file_put_contents($file, $content);
+file_put_contents($file, implode("\n", $lines) . "\n");
 '
 
 php artisan config:clear
