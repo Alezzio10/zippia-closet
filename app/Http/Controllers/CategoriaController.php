@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use App\Models\Categoria;
+use Illuminate\Database\QueryException;
 
 class CategoriaController extends Controller
 {
@@ -130,6 +131,18 @@ class CategoriaController extends Controller
             return response()->json([
                 'message' => 'Categoria no encontrada con ID = '.$id
             ],404);
+        } catch (QueryException $e) {
+            // FK: hay productos asociados a esta categoría
+            if ((int) ($e->errorInfo[1] ?? 0) === 1451) {
+                return response()->json([
+                    'message' => 'No se puede eliminar la categoría porque tiene productos asociados.',
+                ], 409);
+            }
+
+            return response()->json([
+                'message' => 'Error al eliminar la categoria',
+                'error' => $e->getMessage(),
+            ], 500);
         }
     }
 }

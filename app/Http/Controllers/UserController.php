@@ -110,25 +110,33 @@ class UserController extends Controller
      */
    public function store(Request $request)
 {
-    $request->validate([
+    $validated = $request->validate([
         'name' => 'required|string|max:255',
         'apellido' => 'nullable|string|max:255',
         'telefono' => 'nullable|string|max:20',
         'email' => 'required|email|unique:users,email',
         'password' => 'required|string|min:6',
-        'rol_id' => 'required'
+        'rol_id' => 'required|integer|exists:roles,id',
     ]);
 
-    $user = User::create([
-        'name' => $request->name,
-        'apellido' => $request->apellido,
-        'telefono' => $request->telefono,
-        'email' => $request->email,
-        'password' => Hash::make($request->password),
-        'rol_id' => $request->rol_id
-    ]);
+    try {
+        $user = User::create([
+            'name' => $validated['name'],
+            'apellido' => $validated['apellido'] ?? null,
+            'telefono' => $validated['telefono'] ?? null,
+            'email' => $validated['email'],
+            'password' => Hash::make($validated['password']),
+            'rol_id' => (int) $validated['rol_id'],
+        ]);
 
-    return response()->json($user, 201);
+        return response()->json($user, 201);
+    } catch (\Illuminate\Database\QueryException $e) {
+        // Convertir errores de FK/DB en respuesta clara para el front
+        return response()->json([
+            'message' => 'No se pudo crear el usuario (rol inválido o BD inconsistente).',
+            'error' => $e->getMessage(),
+        ], 422);
+    }
 }
     /**
      * Display the specified resource.

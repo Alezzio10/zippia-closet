@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 use App\Models\MetodoPago;
+use App\Models\Pago;
+use App\Models\Pedido;
 use Illuminate\Support\Facades\DB;
 
 use Illuminate\Http\Request;
@@ -11,6 +13,60 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class MetodoPagoController extends Controller
 {
+    public function probarPago(Request $request, string $id)
+    {
+        $data = $request->validate([
+            'user_id' => ['required', 'exists:users,id'],
+            'monto' => ['nullable', 'numeric', 'min:0.01'],
+        ]);
+
+        try {
+            $metodo = MetodoPago::findOrFail($id);
+
+            DB::beginTransaction();
+
+            // Pedido mínimo de prueba (sin detalles)
+            $pedido = Pedido::create([
+                'usuario_id' => $data['user_id'],
+                'total' => $data['monto'] ?? 1.00,
+                'estado' => 'PENDIENTE',
+            ]);
+
+            $pago = Pago::create([
+                'pedido_id' => $pedido->id,
+                'fechaPago' => now(),
+                'metodo_id' => $metodo->id,
+                'user_id' => $data['user_id'],
+                'estado' => 'Pendiente',
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Pago de prueba creado correctamente',
+                'pedido' => $pedido,
+                'pago' => $pago,
+            ], 201);
+        } catch (ModelNotFoundException $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Método de pago no encontrado con ID = ' . $id,
+            ], 404);
+        } catch (ValidationException $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Error de validación.',
+                'errores' => $e->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Error al crear el pago de prueba',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
     /**
      * Display a listing of the resource.
      */
