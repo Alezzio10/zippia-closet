@@ -2,119 +2,82 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\MetodoPago;
+use App\Services\WompiAuthService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
 
 class WompiController extends Controller
 {
-    public function tokenizar(Request $request)
+    public function tokenizar(Request $request, WompiAuthService $wompiAuth)
     {
-        // Soporta el payload del front (numeroTarjeta/cvv/mesVencimiento/anioVencimiento)
-        // y también el formato nativo de Wompi (number/cvc/exp_month/exp_year/card_holder).
         $data = $request->validate([
-            'user_id' => ['nullable', 'integer', 'exists:users,id'],
-
-            'numeroTarjeta' => ['nullable', 'string'],
-            'cvv' => ['nullable', 'string'],
-            'mesVencimiento' => ['nullable'],
-            'anioVencimiento' => ['nullable'],
-
-            'number' => ['nullable', 'string'],
-            'cvc' => ['nullable', 'string'],
-            'exp_month' => ['nullable', 'string'],
-            'exp_year' => ['nullable', 'string'],
-            'card_holder' => ['nullable', 'string'],
+            'user_id' => 'required|integer|exists:users,id',
+            'numeroTarjeta' => 'required|string|min:12|max:19',
+            'cvv' => 'required|string|min:3|max:4',
+            'mesVencimiento' => 'required|integer|min:1|max:12',
+            'anioVencimiento' => 'required|integer|min:2000|max:2100',
+            'idGrupoTarjetas' => 'sometimes|string',
         ]);
 
-        $number = $data['number'] ?? $data['numeroTarjeta'] ?? null;
-        $cvc = $data['cvc'] ?? $data['cvv'] ?? null;
-        $expMonth = $data['exp_month'] ?? $data['mesVencimiento'] ?? null;
-        $expYear = $data['exp_year'] ?? $data['anioVencimiento'] ?? null;
-        $cardHolder = $data['card_holder'] ?? null;
+        $userId = (int) $data['user_id'];
+        $wompiPayload = Arr::except($data, ['user_id']);
 
-        if (!$number || !$cvc || !$expMonth || !$expYear) {
-            return response()->json([
-                'message' => 'Datos incompletos para tokenizar.',
-                'errores' => [
-                    'number' => ['El número de tarjeta es requerido.'],
-                    'cvc' => ['El CVV es requerido.'],
-                    'exp_month' => ['El mes de vencimiento es requerido.'],
-                    'exp_year' => ['El año de vencimiento es requerido.'],
-                ],
-            ], 422);
-        }
+        $token = $wompiAuth->getAccessToken();
 
-        // Wompi espera exp_year con 2 dígitos (YY). Si viene 4 dígitos (YYYY), tomamos los últimos 2.
-        $expYearStr = preg_replace('/\D+/', '', (string) $expYear);
-        if (strlen($expYearStr) === 4) {
-            $expYearStr = substr($expYearStr, -2);
-        }
+        $resp = $wompiAuth->http()->baseUrl('https://api.wompi.sv')
+            ->acceptJson()
+            ->withToken($token)
+            ->post('/Tokenizacion', $wompiPayload);
 
-        // Wompi valida card_holder mínimo 5 caracteres.
-        $cardHolderStr = trim((string) ($cardHolder ?: 'Cliente Zippia'));
-        if (mb_strlen($cardHolderStr) < 5) {
-            $cardHolderStr = 'Cliente Zippia';
-        }
-
-        $payload = [
-            'number' => preg_replace('/\D+/', '', (string) $number),
-            'cvc' => (string) $cvc,
-            'exp_month' => str_pad((string) $expMonth, 2, '0', STR_PAD_LEFT),
-            'exp_year' => $expYearStr,
-            'card_holder' => $cardHolderStr,
-        ];
-
-        $publicKey = env('WOMPI_PUBLIC_KEY');
-        if (!$publicKey) {
-            return response()->json([
-                'message' => 'WOMPI_PUBLIC_KEY no está configurada en .env',
-            ], 500);
-        }
-
-        $baseUrl = rtrim(env('WOMPI_BASE_URL', 'https://sandbox.wompi.co'), '/');
-        $verifySsl = filter_var(env('WOMPI_VERIFY_SSL', true), FILTER_VALIDATE_BOOL);
-
-        try {
-            $http = Http::withToken($publicKey)
-                ->acceptJson()
-                ->timeout(30);
-
-            if (!$verifySsl) {
-                $http = $http->withoutVerifying();
-            }
-
-            $resp = $http->post($baseUrl . '/v1/tokens/cards', $payload);
-
-            if (!$resp->successful()) {
-                $json = $resp->json();
-                $reason = $json['error']['reason'] ?? null;
-                $code = $json['error']['code'] ?? null;
-
-                Log::warning('Wompi tokenización falló', [
-                    'status' => $resp->status(),
-                    'body' => $resp->body(),
-                ]);
-
-                return response()->json([
-                    'message' => $reason
-                        ? ('No se pudo tokenizar la tarjeta: ' . $reason . ($code ? " ($code)" : ''))
-                        : 'No se pudo tokenizar la tarjeta.',
-                    'wompi' => $json,
-                ], $resp->status());
-            }
-
-            return response()->json($resp->json(), 200);
-        } catch (\Throwable $e) {
-            Log::error('Error tokenizando con Wompi', [
-                'error' => $e->getMessage(),
+        if (!$resp->successful()) {
+            Log::error('Error tokenizando tarjeta en Wompi', [
+                'status' => $resp->status(),
+                'body' => $resp->body(),
             ]);
-
             return response()->json([
-                'message' => 'Error interno tokenizando con Wompi.',
-                'error' => $e->getMessage(),
-            ], 500);
+                'message' => 'No se pudo tokenizar la tarjeta',
+                'status' => $resp->status(),
+            ], 502);
         }
+
+        $json = $resp->json();
+
+        // Wompi no documenta aquí el nombre exacto: intentamos variantes comunes
+        $tokenTarjeta =
+            $json['token_tarjeta'] ??
+            $json['tokenTarjeta'] ??
+            $json['TokenTarjeta'] ??
+            $json['token'] ??
+            $json['Token'] ??
+            null;
+
+        if (!$tokenTarjeta) {
+            Log::warning('Respuesta de tokenización sin token identificable', [
+                'response' => $json,
+            ]);
+            return response()->json([
+                'message' => 'Tokenización exitosa, pero Wompi no devolvió token_tarjeta en un campo esperado',
+                'wompi_response' => $json,
+            ], 502);
+        }
+
+        $last4 = substr(preg_replace('/\D+/', '', $data['numeroTarjeta']), -4);
+        $fechaVenc = sprintf('%04d-%02d-01', (int)$data['anioVencimiento'], (int)$data['mesVencimiento']);
+
+        $metodo = MetodoPago::create([
+            'user_id' => $userId,
+            'cuatro_digitos' => $last4 ?: '0000',
+            'fecha_vencimiento' => $fechaVenc,
+            'token_tarjeta' => $tokenTarjeta,
+        ]);
+
+        return response()->json([
+            'message' => 'Tarjeta tokenizada y guardada correctamente',
+            'metodo_pago' => $metodo,
+            'wompi' => $json,
+        ], 201);
     }
 }
 

@@ -32,18 +32,14 @@ Route::apiResource('direcciones', DireccionController::class);
 Route::apiResource('users', UserController::class);
 //ruta de metodo pago
 Route::apiResource('metodo-pagos', MetodoPagoController::class);
+Route::post('metodo-pagos/{metodoId}/probar-pago', [MetodoPagoController::class, 'probarPago']);
 Route::apiResource('pagos', PagoController::class);
+Route::post('pagos/{pagoId}/pagar', [PagoController::class, 'pagar']);
 // Webhook Wompi
 Route::post('/webhook/wompi', [WebhookController::class, 'wompi']);
 
-// Wompi - Tokenización de tarjeta (Front -> Backend -> Wompi)
+// Tokenización Wompi
 Route::post('/tokenizar', [WompiController::class, 'tokenizar']);
-
-// Métodos de pago - flujo de prueba (crear pago de prueba)
-Route::post('/metodo-pagos/{id}/probar-pago', [MetodoPagoController::class, 'probarPago']);
-
-// Pagos - ejecutar pago (Wompi)
-Route::post('/pagos/{id}/pagar', [PagoController::class, 'pagar']);
 //Rutas para AuthController
 Route::prefix('auth')->group(function(){
     Route::post('register', [AuthController::class, 'register']);
