@@ -38,7 +38,7 @@ Route::post('pagos/{pagoId}/pagar', [PagoController::class, 'pagar']);
 // Webhook Wompi
 Route::post('/webhook/wompi', [WebhookController::class, 'wompi']);
 
-// Tokenización Wompi (requiere usuario logueado)
+// Tokenización Wompi
 Route::post('/tokenizar', [WompiController::class, 'tokenizar']);
 //Rutas para AuthController
 Route::prefix('auth')->group(function(){

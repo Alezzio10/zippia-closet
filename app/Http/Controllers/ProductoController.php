@@ -7,6 +7,7 @@ use Illuminate\Validation\ValidationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use App\Models\Producto;
 use App\Models\Imagen;
+use Illuminate\Database\QueryException;
 
 class ProductoController extends Controller
 {
@@ -188,6 +189,18 @@ class ProductoController extends Controller
             return response()->json([
                 'message' => 'Producto no encontrado con ID = ' . $id
             ], 404);
+        } catch (QueryException $e) {
+            // FK: el producto está referenciado por otras tablas (ej. detalles)
+            if ((int) ($e->errorInfo[1] ?? 0) === 1451) {
+                return response()->json([
+                    'message' => 'No se puede eliminar el producto porque tiene registros asociados.',
+                ], 409);
+            }
+
+            return response()->json([
+                'message' => 'Error al eliminar el producto',
+                'error' => $e->getMessage(),
+            ], 500);
         }
     }
 }
