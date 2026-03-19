@@ -49,5 +49,9 @@ Route::prefix('auth')->group(function(){
         Route::get('me',[AuthController::class, 'me']);
         Route::post('logout',[AuthController::class, 'logout']);
         Route::post('refresh',[AuthController::class, 'refresh']);
+
+
+        //esto es para que funcione la lo de guardar perfil en front
+        Route::put('user/update', [AuthController::class, 'update']);
     });
 });
