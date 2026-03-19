@@ -21,6 +21,7 @@ Route::get('/user', function (Request $request) {
 })->middleware('auth:sanctum');
 //Ruta para gestionar el estado de el pedido
 Route::patch('/pedidos/estado/{id}', [PedidoController::class, 'gestionarEstado']);
+Route::get('/pedidos/mis-pedidos', [PedidoController::class, 'misPedidosPagados']);
 //Rutas de la API
 Route::post('users/register', [UserController::class, 'register']);
 Route::post('users/login', [UserController::class, 'login']);

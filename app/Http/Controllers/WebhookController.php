@@ -27,7 +27,8 @@ class WebhookController extends Controller
                 ], 400);
             }
 
-            $pago = Pago::where('id', $pagoId)
+            $pago = Pago::with('pedido')
+                ->where('id', $pagoId)
                 ->where('user_id', $clienteId)
                 ->first();
 
@@ -41,6 +42,11 @@ class WebhookController extends Controller
 
             $pago->estado = $nuevoEstado;
             $pago->save();
+
+            if ($pago->pedido) {
+                $pago->pedido->estado = ($nuevoEstado === 'Completado') ? 'PAGADO' : 'PENDIENTE';
+                $pago->pedido->save();
+            }
 
             return response()->json([
                 'message' => 'Estado de pago actualizado correctamente',

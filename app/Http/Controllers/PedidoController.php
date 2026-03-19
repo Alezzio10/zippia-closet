@@ -10,6 +10,45 @@ use App\Models\Producto;
 
 class PedidoController extends Controller
 {
+    public function misPedidosPagados(Request $request)
+    {
+        try {
+            $data = $request->validate([
+                'user_id' => 'required|integer|exists:users,id',
+            ]);
+
+            $pedidos = Pedido::with([
+                'detalles.producto.marca',
+                'pagos' => function ($query) {
+                    $query->whereIn('estado', ['Completado', 'Exitoso', 'Pagado'])->orderByDesc('id');
+                },
+            ])
+                ->where('usuario_id', (int) $data['user_id'])
+                ->where(function ($query) {
+                    $query->where('estado', 'PAGADO')
+                        ->orWhereHas('pagos', function ($pagoQuery) {
+                            $pagoQuery->whereIn('estado', ['Completado', 'Exitoso', 'Pagado']);
+                        });
+                })
+                ->whereHas('detalles')
+                ->orderByDesc('id')
+                ->get();
+
+            return response()->json([
+                'pedidos' => $pedidos,
+            ], 200);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => 'Error de validación',
+                'errores' => $e->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Error al obtener los pedidos pagados',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
 
     // LISTAR PEDIDOS
     public function index()

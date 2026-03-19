@@ -12,6 +12,8 @@ class DetalleProducto extends Model
         'producto_id',
         'pedido_id',
         'cantidad',
+        'talla',
+        'precio',
         'subtotal'
     ];
 
