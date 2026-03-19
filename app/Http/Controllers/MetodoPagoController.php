@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 use App\Models\MetodoPago;
 use App\Models\Pago;
 use App\Models\Pedido;
+use App\Models\Producto;
+use App\Models\DetalleProducto;
 use Illuminate\Support\Facades\DB;
 
 use Illuminate\Http\Request;
@@ -18,7 +20,10 @@ class MetodoPagoController extends Controller
         try {
             $data = $request->validate([
                 'user_id' => 'required|integer|exists:users,id',
-                'monto' => 'sometimes|numeric|min:0.01',
+                'productos' => 'required|array|min:1',
+                'productos.*.producto_id' => 'required|integer|exists:productos,id',
+                'productos.*.cantidad' => 'required|integer|min:1',
+                'productos.*.talla' => 'nullable|string|max:10',
             ]);
 
             $metodo = MetodoPago::findOrFail($metodoId);
@@ -29,15 +34,43 @@ class MetodoPagoController extends Controller
                 ], 403);
             }
 
-            $monto = isset($data['monto']) ? (float) $data['monto'] : 1.00;
+            $total = 0.0;
+            $detalles = [];
+
+            foreach ($data['productos'] as $item) {
+                $producto = Producto::findOrFail((int) $item['producto_id']);
+                $cantidad = (int) $item['cantidad'];
+                $precio = (float) $producto->precio;
+                $subtotal = $precio * $cantidad;
+
+                $total += $subtotal;
+                $detalles[] = [
+                    'producto_id' => (int) $producto->id,
+                    'cantidad' => $cantidad,
+                    'talla' => $item['talla'] ?? null,
+                    'precio' => $precio,
+                    'subtotal' => $subtotal,
+                ];
+            }
 
             DB::beginTransaction();
 
             $pedido = Pedido::create([
                 'usuario_id' => (int) $data['user_id'],
-                'total' => $monto,
+                'total' => $total,
                 'estado' => 'PENDIENTE',
             ]);
+
+            foreach ($detalles as $detalle) {
+                DetalleProducto::create([
+                    'pedido_id' => $pedido->id,
+                    'producto_id' => $detalle['producto_id'],
+                    'cantidad' => $detalle['cantidad'],
+                    'talla' => $detalle['talla'],
+                    'precio' => $detalle['precio'],
+                    'subtotal' => $detalle['subtotal'],
+                ]);
+            }
 
             $pago = Pago::create([
                 'pedido_id' => $pedido->id,
@@ -50,8 +83,8 @@ class MetodoPagoController extends Controller
             DB::commit();
 
             return response()->json([
-                'message' => 'Pago de prueba creado',
-                'pedido' => $pedido,
+                'message' => 'Pago creado',
+                'pedido' => $pedido->load('detalles.producto.marca'),
                 'pago' => $pago,
             ], 201);
         } catch (ModelNotFoundException $e) {

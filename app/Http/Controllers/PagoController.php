@@ -117,9 +117,19 @@ class PagoController extends Controller
                 ], 502);
             }
 
+            // Si Wompi respondió exitosamente, marcamos el pago como completado de inmediato.
+            // Esto evita que quede en "Procesando" cuando el webhook no se recibe a tiempo.
+            $pago->estado = 'Completado';
+            $pago->save();
+
+            if ($pago->pedido) {
+                $pago->pedido->estado = 'PAGADO';
+                $pago->pedido->save();
+            }
+
             return response()->json([
-                'message' => 'Transacción iniciada en Wompi',
-                'pago' => $pago,
+                'message' => 'Pago exitoso',
+                'pago' => $pago->fresh(['pedido', 'metodoPago', 'user']),
                 'wompi' => $resp->json(),
             ], 200);
         } catch (ModelNotFoundException $e) {
