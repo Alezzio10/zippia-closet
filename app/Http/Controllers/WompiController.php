@@ -12,6 +12,7 @@ class WompiController extends Controller
 {
     public function tokenizar(Request $request, WompiAuthService $wompiAuth)
     {
+        //Valido que los datos de la tarjeta sean correctos
         $data = $request->validate([
             'user_id' => 'required|integer|exists:users,id',
             'numeroTarjeta' => 'required|string|min:12|max:19',

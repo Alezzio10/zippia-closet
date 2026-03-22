@@ -7,7 +7,6 @@ use App\Models\Pedido;
 use App\Models\Producto;
 use App\Models\DetalleProducto;
 use Illuminate\Support\Facades\DB;
-
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;

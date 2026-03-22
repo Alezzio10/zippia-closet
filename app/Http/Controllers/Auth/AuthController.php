@@ -24,6 +24,22 @@ class AuthController extends Controller
         //en caso de exitoso retornamos el token
         return $this->responseWithToken($token);
     }
+
+    /** Login exclusivo para administradores (Report Studio) */
+    public function adminLogin(Request $request){
+        $credenciales = $request->only('email','password');
+        if(!$token = Auth::attempt($credenciales)){
+            return response()->json(['message' => 'Credenciales inválidas'], 401);
+        }
+        $user = auth()->user();
+        if (!$user->rol_id || (int) $user->rol_id !== 1) {
+            Auth::logout();
+            return response()->json([
+                'message' => 'Acceso denegado. Solo administradores pueden acceder.'
+            ], 403);
+        }
+        return $this->responseWithToken($token);
+    }
     public function register(Request $request){
       //validamos datos a través de Request
      $validator = Validator::make($request->all(), [
@@ -62,10 +78,12 @@ class AuthController extends Controller
   }
 
   protected function responseWithToken($token){
+      $user = auth()->user();
       return response()->json([
           'access_token' => $token,
           'token_type' => 'bearer',
-          'user' => auth()->user(),
+          'user' => $user,
+          'is_admin' => $user->rol_id && (int) $user->rol_id === 1,
           'expires_in' => auth()->factory()->getTTL() * 60
       ]);
   }

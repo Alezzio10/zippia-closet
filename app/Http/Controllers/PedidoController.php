@@ -50,6 +50,42 @@ class PedidoController extends Controller
         }
     }
 
+    /**
+     * Lista todos los pedidos del usuario logeado (todos los estados)
+     */
+    public function misPedidos(Request $request)
+    {
+        try {
+            $data = $request->validate([
+                'user_id' => 'required|integer|exists:users,id',
+            ]);
+
+            $pedidos = Pedido::with([
+                'detalles.producto.marca',
+                'detalles.producto.imagenes',
+                'pagos' => fn ($q) => $q->orderByDesc('id'),
+            ])
+                ->where('usuario_id', (int) $data['user_id'])
+                ->whereHas('detalles')
+                ->orderByDesc('id')
+                ->get();
+
+            return response()->json([
+                'pedidos' => $pedidos,
+            ], 200);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => 'Error de validación',
+                'errores' => $e->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Error al obtener los pedidos',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
     // LISTAR PEDIDOS
     public function index()
     {
@@ -72,11 +108,16 @@ class PedidoController extends Controller
     public function store(Request $request)
     {
         try {
+            $usuarioId = auth()->id();
+            if (!$usuarioId) {
+                $request->validate(['usuario_id' => 'required|exists:users,id']);
+                $usuarioId = $request->usuario_id;
+            }
             $request->validate([
-                'usuario_id' => 'required|exists:users,id',
                 'productos' => 'required|array|min:1',
                 'productos.*.producto_id' => 'required|exists:productos,id',
-                'productos.*.cantidad' => 'required|integer|min:1'
+                'productos.*.cantidad' => 'required|integer|min:1',
+                'productos.*.talla' => 'nullable|string|max:10',
             ]);
             $total = 0;
             foreach ($request->productos as $item) {
@@ -85,7 +126,7 @@ class PedidoController extends Controller
             }
             // crear pedido
             $pedido = Pedido::create([
-                'usuario_id' => $request->usuario_id,
+                'usuario_id' => $usuarioId,
                 'total' => $total,
                 'estado' => 'PENDIENTE'
             ]);
@@ -96,6 +137,7 @@ class PedidoController extends Controller
                     'pedido_id' => $pedido->id,
                     'producto_id' => $producto->id,
                     'cantidad' => $item['cantidad'],
+                    'talla' => $item['talla'] ?? null,
                     'precio' => $producto->precio,
                     'subtotal' => $producto->precio * $item['cantidad']
                 ]);
@@ -163,14 +205,16 @@ class PedidoController extends Controller
     {
         try {
             $pedido = Pedido::findOrFail($id);
+            $pedido->detalles()->delete();
+            $pedido->pagos()->delete();
             $pedido->delete();
             return response()->json([
                 'message' => 'Pedido eliminado correctamente'
-            ],200);
+            ], 200);
         } catch (ModelNotFoundException $e) {
             return response()->json([
                 'message' => 'Pedido no encontrado con ID = '.$id
-            ],404);
+            ], 404);
         }
     }
     public function gestionarEstado(Request $request, $id)

@@ -9,60 +9,43 @@ use App\Models\Pago;
 class WebhookController extends Controller
 {
     public function wompi(Request $request)
-    {
-        try {
-            $payload = $request->all();
+{
+    \Log::info('🔥 WEBHOOK Wompi', $request->all());
 
-            Log::info('Webhook de Wompi recibido', [
-                'payload' => $payload,
-            ]);
+    $transaction = $request->input('data.transaction');
 
-            $pagoId = $payload['cliente']['pago_id'] ?? null;
-            $clienteId = $payload['cliente']['cliente_id'] ?? null;
-            $resultado = $payload['ResultadoTransaccion'] ?? null;
-
-            if (!$pagoId || !$clienteId) {
-                return response()->json([
-                    'message' => 'Datos de cliente incompletos en el webhook',
-                ], 400);
-            }
-
-            $pago = Pago::with('pedido')
-                ->where('id', $pagoId)
-                ->where('user_id', $clienteId)
-                ->first();
-
-            if (!$pago) {
-                return response()->json([
-                    'message' => 'Pago no encontrado para el usuario indicado',
-                ], 404);
-            }
-
-            $nuevoEstado = ($resultado === 'ExitosaAprobada') ? 'Completado' : 'Fallida';
-
-            $pago->estado = $nuevoEstado;
-            $pago->save();
-
-            if ($pago->pedido) {
-                $pago->pedido->estado = ($nuevoEstado === 'Completado') ? 'PAGADO' : 'PENDIENTE';
-                $pago->pedido->save();
-            }
-
-            return response()->json([
-                'message' => 'Estado de pago actualizado correctamente',
-                'pago_id' => $pago->id,
-                'estado' => $pago->estado,
-            ], 200);
-        } catch (\Exception $e) {
-            Log::error('Error procesando webhook de Wompi', [
-                'error' => $e->getMessage(),
-            ]);
-
-            return response()->json([
-                'message' => 'Error al procesar el webhook',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
+    if (!$transaction) {
+        return response()->json(['ok' => true], 200);
     }
+
+    $status = $transaction['status'] ?? null;
+    $reference = $transaction['reference'] ?? null;
+
+    if (!$reference) {
+        return response()->json(['ok' => true], 200);
+    }
+
+    // Ejemplo: pedido_5 → 5
+    $pagoId = str_replace('pedido_', '', $reference);
+
+    $pago = \App\Models\Pago::with('pedido')->find($pagoId);
+
+    if (!$pago) {
+        return response()->json(['ok' => true], 200);
+    }
+
+    $nuevoEstado = ($status === 'APPROVED') ? 'Completado' : 'Fallida';
+
+    $pago->estado = $nuevoEstado;
+    $pago->save();
+
+    if ($pago->pedido) {
+        $pago->pedido->estado = ($nuevoEstado === 'Completado') ? 'PAGADO' : 'PENDIENTE';
+        $pago->pedido->save();
+    }
+
+    return response()->json(['ok' => true], 200);
 }
+}
+
 

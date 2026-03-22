@@ -16,6 +16,7 @@ class PagoController extends Controller
     public function pagar(Request $request, string $pagoId, WompiAuthService $wompiAuth)
     {
         try {
+            //Valido datos que llegan a la solicitud
             $data = $request->validate([
                 'user_id' => 'sometimes|integer|exists:users,id',
             ]);
@@ -106,14 +107,12 @@ class PagoController extends Controller
                     'body' => $resp->body(),
                 ]);
 
-                $pago->estado = 'Fallida';
-                $pago->save();
+                $pago->delete();
 
                 return response()->json([
                     'message' => 'No se pudo iniciar la transacción en Wompi',
                     'status' => $resp->status(),
                     'wompi_body' => $resp->json(),
-                    'pago' => $pago,
                 ], 502);
             }
 
@@ -197,10 +196,12 @@ class PagoController extends Controller
             ]);
             DB::beginTransaction();
 
+            $pedido = \App\Models\Pedido::findOrFail($data['pedido_id']);
             $pago = Pago::create([
                 'pedido_id' => $data['pedido_id'],
                 'fechaPago' => $data['fechaPago'],
-                'metodo_id' => $data['metodo_id']
+                'metodo_id' => $data['metodo_id'],
+                'user_id' => $pedido->usuario_id,
             ]);
 
             DB::commit();
