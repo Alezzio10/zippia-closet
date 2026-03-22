@@ -15,7 +15,7 @@ class WebhookController extends Controller
     Log::info('ALL()', $request->all());
 
     return response()->json([
-        'message' => 'webhook recibido'
+        'message' => 'webhook recibidoo'
     ], 200);
 }
 
