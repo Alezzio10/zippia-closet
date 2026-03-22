@@ -75,7 +75,7 @@ class PagoController extends Controller
                 ], 422);
             }
 
-            $urlWebhook = 'https://webhook.site/49d0ec21-04d6-4b8d-bf9b-94751a281ec4';
+            $urlWebhook = 'https://zippia-closet-production.up.railway.app/api/webhook/wompi';
 
             $payloadWompi = [
                 'monto' => (float) $monto,
