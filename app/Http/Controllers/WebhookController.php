@@ -10,14 +10,15 @@ class WebhookController extends Controller
 {
     public function wompi(Request $request)
     {
-        try {
-            Log::info('WEBHOOK RAW', $request->all());
-            //Recibo toda la informacion enviada por wompi
-            $payload = $request->all();
-
-            Log::info('Webhook de Wompi recibido', [
-                'payload' => $payload,
-            ]);
+        {
+            Log::info('RAW BODY: ' . $request->getContent());
+        
+            try {
+                $payload = json_decode($request->getContent(), true);
+        
+                Log::info('PAYLOAD PARSEADO', [
+                    'payload' => $payload
+                ]);
 
             $pagoId = $payload['datosAdicionales']['pago_id'] ?? null;
             $clienteId = $payload['datosAdicionales']['cliente_id'] ?? null;
@@ -68,4 +69,4 @@ class WebhookController extends Controller
     }
 }
 
-
+}
