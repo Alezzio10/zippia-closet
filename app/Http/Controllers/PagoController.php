@@ -75,7 +75,7 @@ class PagoController extends Controller
                 ], 422);
             }
 
-            $urlWebhook = rtrim((string) env('APP_URL', ''), '/') . '/api/webhook/wompi';
+            $urlWebhook = 'https://zippia-closet-production.up.railway.app/api/webhook/wompi';
 
             $payloadWompi = [
                 'monto' => (float) $monto,
@@ -116,10 +116,7 @@ class PagoController extends Controller
                 ], 502);
             }
 
-            // Si Wompi respondió exitosamente, marcamos el pago como completado de inmediato.
-            // Esto evita que quede en "Procesando" cuando el webhook no se recibe a tiempo.
-            $pago->estado = 'Completado';
-            $pago->save();
+           
 
             if ($pago->pedido) {
                 $pago->pedido->estado = 'PAGADO';
