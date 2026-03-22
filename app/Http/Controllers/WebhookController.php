@@ -10,12 +10,12 @@ class WebhookController extends Controller
 {
     public function wompi(Request $request)
 {
-    $raw = $request->getContent();
-
-    Log::info('RAW BODY: ' . $raw);
+    Log::info('HEADERS', $request->headers->all());
+    Log::info('RAW BODY', ['body' => $request->getContent()]);
+    Log::info('ALL()', $request->all());
 
     return response()->json([
-        'message' => 'Webhook recibido'
+        'message' => 'webhook recibido'
     ], 200);
 }
 
