@@ -59,7 +59,7 @@ Route::post('metodo-pagos/{metodoId}/probar-pago', [MetodoPagoController::class,
 Route::apiResource('pagos', PagoController::class);
 Route::post('pagos/{pagoId}/pagar', [PagoController::class, 'pagar']);
 // Webhook Wompi
-Route::post('/webhook/wompi', [WebhookController::class, 'wompi']);
+Route::any('/webhook/wompi', [WebhookController::class, 'wompi']);
 
 // Tokenización Wompi
 Route::post('/tokenizar', [WompiController::class, 'tokenizar']);
